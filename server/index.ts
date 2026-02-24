@@ -8,7 +8,7 @@ const server = Server({
   origins: [
     Origins.LOCALHOST_IN_DEVELOPMENT,
     // Add your production domain here when deploying:
-    // 'https://dalmuti.example.com',
+    'https://dalmuti-web.vercel.app/',
   ],
 });
 
