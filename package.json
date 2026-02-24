@@ -1,0 +1,29 @@
+{
+  "name": "dalmuti-web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev:client": "vite",
+    "dev:server": "ts-node --project tsconfig.server.json server/index.ts",
+    "build:client": "tsc -p tsconfig.app.json --noEmit && vite build",
+    "build:server": "tsc -p tsconfig.server.json",
+    "build": "npm run build:client && npm run build:server",
+    "start:server": "node dist/server/index.js",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "boardgame.io": "^0.50.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.3.1",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.0",
+    "vite": "^5.4.0"
+  }
+}

@@ -1,0 +1,37 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --color-bg: #1a0a35;
+  --color-surface: #2e1060;
+  --color-card: #fffef0;
+  --color-card-border: #8b7355;
+  --color-text: #f5f0e8;
+  --color-text-muted: #c4aee8;
+  --color-accent: #f4a261;
+  --color-danger: #e63946;
+  --color-jester: #9b5de5;
+  --radius: 8px;
+  --radius-card: 6px;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  min-height: 100vh;
+}
+
+button {
+  cursor: pointer;
+  font-family: inherit;
+}
+
+input {
+  font-family: inherit;
+}

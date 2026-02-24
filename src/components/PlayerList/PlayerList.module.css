@@ -1,0 +1,78 @@
+/* Vertical column (left / right positions) */
+.playerList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Horizontal row (top / bottom positions) */
+.playerListH {
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+}
+
+.player {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  border: 2px solid transparent;
+  transition: border-color 0.2s;
+  min-width: 120px;
+  max-width: 160px;
+}
+
+.player.active {
+  border-color: var(--color-accent);
+}
+
+.player.me {
+  background: rgba(244, 162, 97, 0.1);
+}
+
+.player.finished {
+  opacity: 0.5;
+}
+
+.nameRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 110px;
+}
+
+.meTag {
+  font-size: 0.65rem;
+  background: var(--color-accent);
+  color: #1a1a1a;
+  padding: 1px 5px;
+  border-radius: 99px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.title {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--color-accent);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stats {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}

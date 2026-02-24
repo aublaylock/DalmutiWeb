@@ -1,0 +1,111 @@
+.handArea {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: var(--radius);
+}
+
+.taxPrompt {
+  text-align: center;
+  color: var(--color-accent);
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  min-height: 80px;
+  align-items: flex-end;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.actions button {
+  padding: 8px 24px;
+  border-radius: var(--radius);
+  border: none;
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: opacity 0.15s, transform 0.1s;
+}
+
+.actions button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.actions button:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+
+.playBtn {
+  background: var(--color-accent);
+  color: #1a1a1a;
+}
+
+.passBtn {
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--color-text);
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+.taxBtn {
+  background: var(--color-jester);
+  color: #fff;
+}
+
+.readyBtn {
+  background: #2d6a4f;
+  color: #fff;
+}
+
+.readyBtn:disabled {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: var(--color-text-muted) !important;
+  opacity: 1 !important;
+  cursor: default !important;
+}
+
+.revolutionBtn {
+  background: var(--color-danger);
+  color: #fff;
+  animation: revolutionPulse 1.2s ease-in-out infinite;
+}
+
+@keyframes revolutionPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.85; transform: scale(1.03); }
+}
+
+.incomingSection {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  background: rgba(155, 93, 229, 0.15);
+  border: 1px solid rgba(155, 93, 229, 0.4);
+  border-radius: var(--radius);
+}
+
+.incomingCards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+}
+
+.waitingMsg {
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  padding: 4px 0;
+}

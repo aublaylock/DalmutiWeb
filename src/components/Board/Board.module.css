@@ -1,0 +1,247 @@
+.board {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding: 12px;
+  gap: 12px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: var(--radius);
+}
+
+.titleImg {
+  height: 36px;
+  width: auto;
+  display: block;
+}
+
+.meta {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+}
+
+.phase {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 10px;
+  border-radius: 99px;
+}
+
+.yourTurn {
+  background: var(--color-accent);
+  color: #1a1a1a;
+  padding: 2px 10px;
+  border-radius: 99px;
+  font-weight: 700;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.revolution {
+  background: var(--color-danger);
+  color: #fff;
+  padding: 2px 12px;
+  border-radius: 99px;
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* ---- Table layout (tax + play phases) ---- */
+
+.main {
+  flex: 1;
+  display: grid;
+  grid-template-areas:
+    ". topPlayers ."
+    "leftPlayer center rightPlayers"
+    ". bottomPlayers .";
+  grid-template-columns: auto 1fr auto;
+  grid-template-rows: auto 1fr auto;
+  gap: 10px;
+  min-height: 0;
+}
+
+.topPlayers {
+  grid-area: topPlayers;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.leftPlayer {
+  grid-area: leftPlayer;
+  display: flex;
+  align-items: center;
+}
+
+.center {
+  grid-area: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rightPlayers {
+  grid-area: rightPlayers;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+}
+
+.bottomPlayers {
+  grid-area: bottomPlayers;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* ---- Round-over screen ---- */
+
+.roundOverContent {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.roundOverBox {
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  padding: 36px 56px;
+  text-align: center;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  min-width: 320px;
+}
+
+.roundOverTitle {
+  font-size: 1.8rem;
+  margin-bottom: 24px;
+  color: var(--color-accent);
+}
+
+.finishList {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.finishItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius);
+}
+
+.finishPos {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  min-width: 28px;
+  font-weight: 600;
+}
+
+.finishName {
+  font-weight: 600;
+  flex: 1;
+  text-align: left;
+}
+
+.finishTitle {
+  font-size: 0.75rem;
+  color: var(--color-accent);
+  background: rgba(244, 162, 97, 0.15);
+  padding: 2px 8px;
+  border-radius: 99px;
+}
+
+.countdownMsg {
+  color: var(--color-text-muted);
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.countdownMsg strong {
+  color: var(--color-text);
+}
+
+/* ---- Lobby waiting room ---- */
+
+.lobbyWaiting {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+
+.lobbyHeading {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+.playerRoster {
+  list-style: none;
+  padding: 16px 24px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: var(--radius);
+  min-width: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rosterJoined {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.rosterEmpty {
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.startBtn {
+  padding: 12px 36px;
+  border-radius: var(--radius);
+  border: none;
+  font-size: 1rem;
+  font-weight: 700;
+  background: var(--color-accent);
+  color: #1a1a1a;
+  transition: opacity 0.15s, transform 0.1s;
+}
+
+.startBtn:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+
+.startBtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.lobbyWaitMsg {
+  color: var(--color-text-muted);
+  font-size: 0.95rem;
+}
