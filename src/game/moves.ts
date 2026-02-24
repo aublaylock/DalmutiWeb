@@ -253,6 +253,14 @@ export const advanceRound: Move<DalmutiState> = ({ G, ctx, random }) => {
     debt.offeredCards = bestCards;
   }
 
+  // Reset per-player round state so playPhase.endIf doesn't see stale finished
+  // flags from the previous round. playPhase.onBegin does the same reset, but
+  // boardgame.io 0.50.x can evaluate endIf before onBegin in certain transitions.
+  for (const id of Object.keys(G.players)) {
+    G.players[id].finished = false;
+    G.players[id].finishPosition = null;
+  }
+
   // Signal roundOverPhase.endIf to transition to the tax phase
   G.roundOverDone = true;
 };
