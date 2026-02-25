@@ -35,3 +35,15 @@
   border-color: var(--color-accent);
   outline: 2px solid var(--color-accent);
 }
+
+.highlighted {
+  box-shadow: 0 0 14px 4px rgba(72, 199, 116, 0.75);
+  border-color: #48c774;
+  outline: 2px solid #48c774;
+  animation: receivedPulse 1.2s ease-in-out 3;
+}
+
+@keyframes receivedPulse {
+  0%, 100% { box-shadow: 0 0 14px 4px rgba(72, 199, 116, 0.75); }
+  50% { box-shadow: 0 0 22px 6px rgba(72, 199, 116, 0.4); }
+}

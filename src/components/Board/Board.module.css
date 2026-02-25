@@ -110,22 +110,29 @@
   gap: 8px;
 }
 
-/* ---- Round-over screen ---- */
+/* ---- Round-over overlay (transparent, floats over the board) ---- */
 
-.roundOverContent {
-  flex: 1;
+.roundOverOverlay {
+  position: fixed;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+  pointer-events: none;
+  z-index: 20;
 }
 
 .roundOverBox {
-  background: var(--color-surface);
+  background: rgba(20, 12, 32, 0.72);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: var(--radius);
   padding: 36px 56px;
   text-align: center;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
   min-width: 320px;
+  pointer-events: auto;
 }
 
 .roundOverTitle {

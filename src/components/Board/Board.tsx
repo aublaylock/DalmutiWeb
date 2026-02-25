@@ -165,43 +165,9 @@ export function Board({
     );
   }
 
-  // ---- Round-over phase: results screen with 15-second countdown ----
-  if (ctx.phase === 'roundOver') {
-    const completedRound = G.roundNumber - 1;
-    return (
-      <div className={styles.board}>
-        <header className={styles.header}>
-          <img src="/greatDalmutiTitle.png" alt="The Great Dalmuti" className={styles.titleImg} />
-          <div className={styles.meta}>
-            <span className={styles.phase}>Round {completedRound} Complete</span>
-          </div>
-        </header>
-        <div className={styles.roundOverContent}>
-          <div className={styles.roundOverBox}>
-            <h2 className={styles.roundOverTitle}>Round {completedRound} Results</h2>
-            <ol className={styles.finishList}>
-              {G.finishOrder.map((id, i) => {
-                const name = matchData?.find((p) => String(p.id) === id)?.name ?? `Player ${id}`;
-                const title = getSocialTitle(i + 1, n);
-                return (
-                  <li key={id} className={styles.finishItem}>
-                    <span className={styles.finishPos}>#{i + 1}</span>
-                    <span className={styles.finishName}>{name}</span>
-                    {title && <span className={styles.finishTitle}>{title}</span>}
-                  </li>
-                );
-              })}
-            </ol>
-            <p className={styles.countdownMsg}>
-              Next round starting in <strong>{countdown}</strong>s…
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ---- Tax / Play phases: main game board ----
+  // ---- Tax / Play / Round-over phases: main game board ----
+  const isRoundOver = ctx.phase === 'roundOver';
+  const completedRound = G.roundNumber - 1;
 
   // Debt where this player is the payer (Peon) — their best cards were auto-staged
   const myTaxDebt = inTaxPhase && playerID !== null
@@ -234,19 +200,24 @@ export function Board({
   // Table layout: assign player IDs to positions by social rank
   const positions = getTablePositions(G, n);
 
+  // During round-over, suppress active-turn highlights (no one is "playing")
+  const activePlayerForList = inTaxPhase || isRoundOver ? '' : ctx.currentPlayer;
+
   return (
     <div className={styles.board}>
       <header className={styles.header}>
-        <h1 className={styles.title}>The Great Dalmuti</h1>
+        <img src="/greatDalmutiTitle.png" alt="The Great Dalmuti" className={styles.titleImg} />
         <div className={styles.meta}>
-          <span>Round {G.roundNumber}</span>
+          <span>Round {isRoundOver ? completedRound : G.roundNumber}</span>
           <span className={styles.phase}>
-            {inTaxPhase ? 'Tax Collection' : 'Play'}
+            {isRoundOver ? `Round ${completedRound} Complete` : inTaxPhase ? 'Tax Collection' : 'Play'}
           </span>
           {revolutionAnnouncement && (
             <span className={styles.revolution}>{revolutionAnnouncement}</span>
           )}
-          {isMyTurn && !inTaxPhase && <span className={styles.yourTurn}>Your Turn</span>}
+          {isMyTurn && !inTaxPhase && !isRoundOver && (
+            <span className={styles.yourTurn}>Your Turn</span>
+          )}
         </div>
       </header>
 
@@ -255,7 +226,7 @@ export function Board({
         <div className={styles.topPlayers}>
           <PlayerList
             players={G.players}
-            currentPlayer={inTaxPhase ? '' : ctx.currentPlayer}
+            currentPlayer={activePlayerForList}
             playerID={playerID}
             matchData={matchData}
             finishOrder={G.finishOrder}
@@ -268,7 +239,7 @@ export function Board({
         <div className={styles.leftPlayer}>
           <PlayerList
             players={G.players}
-            currentPlayer={inTaxPhase ? '' : ctx.currentPlayer}
+            currentPlayer={activePlayerForList}
             playerID={playerID}
             matchData={matchData}
             finishOrder={G.finishOrder}
@@ -284,7 +255,7 @@ export function Board({
         <div className={styles.rightPlayers}>
           <PlayerList
             players={G.players}
-            currentPlayer={inTaxPhase ? '' : ctx.currentPlayer}
+            currentPlayer={activePlayerForList}
             playerID={playerID}
             matchData={matchData}
             finishOrder={G.finishOrder}
@@ -296,7 +267,7 @@ export function Board({
         <div className={styles.bottomPlayers}>
           <PlayerList
             players={G.players}
-            currentPlayer={inTaxPhase ? '' : ctx.currentPlayer}
+            currentPlayer={activePlayerForList}
             playerID={playerID}
             matchData={matchData}
             finishOrder={G.finishOrder}
@@ -306,7 +277,8 @@ export function Board({
         </div>
       </div>
 
-      {myPlayer && (
+      {/* Hand: hidden during round-over since the round is complete */}
+      {!isRoundOver && myPlayer && (
         <Hand
           cards={myPlayer.hand}
           isMyTurn={isMyTurn}
@@ -323,6 +295,31 @@ export function Board({
           hasMarkedReady={hasMarkedReady}
           onMarkReady={() => moves.markReady(playerID)}
         />
+      )}
+
+      {/* Round-over overlay: transparent panel floats over the board */}
+      {isRoundOver && (
+        <div className={styles.roundOverOverlay}>
+          <div className={styles.roundOverBox}>
+            <h2 className={styles.roundOverTitle}>Round {completedRound} Results</h2>
+            <ol className={styles.finishList}>
+              {G.finishOrder.map((id, i) => {
+                const name = matchData?.find((p) => String(p.id) === id)?.name ?? `Player ${id}`;
+                const title = getSocialTitle(i + 1, n);
+                return (
+                  <li key={id} className={styles.finishItem}>
+                    <span className={styles.finishPos}>#{i + 1}</span>
+                    <span className={styles.finishName}>{name}</span>
+                    {title && <span className={styles.finishTitle}>{title}</span>}
+                  </li>
+                );
+              })}
+            </ol>
+            <p className={styles.countdownMsg}>
+              Next round starting in <strong>{countdown}</strong>s…
+            </p>
+          </div>
+        </div>
       )}
     </div>
   );

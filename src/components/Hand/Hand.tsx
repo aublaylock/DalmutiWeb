@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Card, Trick, TaxDebt } from '../../game/types';
 import { CardComponent } from '../Card/Card';
 import styles from './Hand.module.css';
@@ -42,6 +42,36 @@ export function Hand({
   onMarkReady,
 }: HandProps) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  // Track card IDs from the previous render to detect newly received tax cards.
+  // Starts as null so the very first render (initial hand) is never highlighted.
+  const prevCardIds = useRef<Set<string> | null>(null);
+  const [highlightedIds, setHighlightedIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const currentIds = new Set(cards.map((c) => c.id));
+
+    if (!inTaxPhase) {
+      setHighlightedIds(new Set());
+      prevCardIds.current = currentIds;
+      return;
+    }
+
+    // First render in tax phase: snapshot cards without highlighting
+    if (prevCardIds.current === null) {
+      prevCardIds.current = currentIds;
+      return;
+    }
+
+    const added = new Set([...currentIds].filter((id) => !prevCardIds.current!.has(id)));
+    prevCardIds.current = currentIds;
+
+    if (added.size > 0) {
+      setHighlightedIds(added);
+      const timer = setTimeout(() => setHighlightedIds(new Set()), 8000);
+      return () => clearTimeout(timer);
+    }
+  }, [cards, inTaxPhase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleCard = (id: string) => {
     setSelected((prev) => {
@@ -144,6 +174,7 @@ export function Hand({
             selected={selected.has(card.id)}
             onClick={() => toggleCard(card.id)}
             interactive={cardsInteractive}
+            highlighted={highlightedIds.has(card.id)}
           />
         ))}
       </div>

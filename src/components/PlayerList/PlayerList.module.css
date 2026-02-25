@@ -69,10 +69,51 @@
   text-overflow: ellipsis;
 }
 
-.stats {
+/* ---- Card fan ---- */
+
+.cardFanContainer {
+  position: relative;
+  height: 44px;
   display: flex;
-  gap: 8px;
+  align-items: flex-end;
+  justify-content: center;
   margin-top: 4px;
+}
+
+.fanCard {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 26px;
+  height: auto;
+  border-radius: 3px;
+  transform-origin: bottom center;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+
+.fanCount {
+  position: absolute;
+  bottom: -1px;
+  right: -14px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  background: rgba(0, 0, 0, 0.5);
+  padding: 1px 4px;
+  border-radius: 99px;
+  line-height: 1.4;
+}
+
+.cardFanEmpty {
   font-size: 0.75rem;
   color: var(--color-text-muted);
+  margin-top: 4px;
+  text-align: center;
+}
+
+.finishBadge {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  margin-top: 4px;
+  text-align: center;
 }

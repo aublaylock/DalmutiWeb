@@ -1,6 +1,38 @@
 import type { DalmutiState } from '../../game/types';
 import styles from './PlayerList.module.css';
 
+/** Fan of face-down card backs representing an opponent's hand size. */
+function CardFan({ count }: { count: number }) {
+  if (count === 0) return <div className={styles.cardFanEmpty}>—</div>;
+
+  const maxVisible = Math.min(count, 8);
+  // Spread cards across up to 70 px (each card step = 10 px), centered
+  const totalSpread = Math.min(70, (maxVisible - 1) * 10);
+  const maxAngle = 18; // ± degrees at the extremes
+
+  return (
+    <div className={styles.cardFanContainer}>
+      {Array.from({ length: maxVisible }, (_, i) => {
+        const t = maxVisible > 1 ? i / (maxVisible - 1) : 0.5; // 0..1
+        // Spread cards evenly across totalSpread px, centered on the container midpoint
+        const offset = (t - 0.5) * totalSpread;
+        const angle = (t - 0.5) * 2 * maxAngle;
+        return (
+          <img
+            key={i}
+            src="/cards/back.png"
+            alt=""
+            aria-hidden="true"
+            className={styles.fanCard}
+            style={{ transform: `translateX(calc(-50% + ${offset}px)) rotate(${angle}deg)` }}
+          />
+        );
+      })}
+      <span className={styles.fanCount}>{count}</span>
+    </div>
+  );
+}
+
 interface MatchPlayer {
   id: number;
   name?: string;
@@ -77,10 +109,8 @@ export function PlayerList({
               {isMe && <span className={styles.meTag}>You</span>}
             </div>
             {title && <span className={styles.title}>{title}</span>}
-            <div className={styles.stats}>
-              <span>{player.hand.length} cards</span>
-              {pos !== null && <span>#{pos} out</span>}
-            </div>
+            {!finished && <CardFan count={player.hand.length} />}
+            {pos !== null && <div className={styles.finishBadge}>#{pos} out</div>}
           </div>
         );
       })}

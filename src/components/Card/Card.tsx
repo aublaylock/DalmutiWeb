@@ -7,6 +7,8 @@ interface CardProps {
   onClick?: () => void;
   interactive?: boolean;
   faceDown?: boolean;
+  /** Green glow highlight for cards newly received during taxation. */
+  highlighted?: boolean;
 }
 
 /**
@@ -31,7 +33,7 @@ function getCardImageUrl(card: Card): string {
   return `/cards/${rankStr}-${copyStr}.png`;
 }
 
-export function CardComponent({ card, selected, onClick, interactive, faceDown }: CardProps) {
+export function CardComponent({ card, selected, onClick, interactive, faceDown, highlighted }: CardProps) {
   const src = faceDown ? '/cards/back.png' : getCardImageUrl(card);
   const isJester = card.rank === 0;
   const altText = faceDown
@@ -46,6 +48,7 @@ export function CardComponent({ card, selected, onClick, interactive, faceDown }
         styles.card,
         selected ? styles.selected : '',
         interactive ? styles.interactive : '',
+        highlighted ? styles.highlighted : '',
       ]
         .filter(Boolean)
         .join(' ')}
