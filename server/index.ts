@@ -12,6 +12,12 @@ const server = Server({
   ],
 });
 
+// Simple health-check endpoint so UptimeRobot can keep the Render instance warm.
+server.router.get('/health', (ctx) => {
+  ctx.status = 200;
+  ctx.body = { status: 'ok' };
+});
+
 server.run(PORT, () => {
   console.log(`boardgame.io server listening on http://localhost:${PORT}`);
   console.log(`Lobby API: http://localhost:${PORT}/games/great-dalmuti`);
