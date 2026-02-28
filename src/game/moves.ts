@@ -318,6 +318,9 @@ export const declareRevolution: Move<DalmutiState> = ({ G }, callerID: string) =
     }
   }
 
+  // The two Jesters are spent to declare the revolution — remove them from the caller's hand
+  player.hand = player.hand.filter((c) => c.rank !== 0);
+
   // Determine if this is a Greater Revolution (declarer is the Greater Peon)
   const isGreater = G.finishOrder.length >= n && G.finishOrder[n - 1] === playerID;
 
@@ -344,7 +347,10 @@ export const declareRevolution: Move<DalmutiState> = ({ G }, callerID: string) =
  * activePlayers stage mode ctx.currentPlayer reflects the *turn's* current
  * player, not the player who invoked the stage move.
  */
-export const giveBackCards: Move<DalmutiState> = ({ G }, callerID: string, cardIds: string[]) => {
+export const giveBackCards: Move<DalmutiState> = ({ G, ctx }, callerID: string, cardIds: string[]) => {
+  // Exchange is locked until every player has agreed (markReady) to the tax
+  if (G.readyPlayers.length < ctx.numPlayers) return INVALID_MOVE;
+
   const playerID = callerID;
 
   const debt = G.taxDebts.find(

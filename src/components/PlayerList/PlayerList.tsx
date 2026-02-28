@@ -48,6 +48,8 @@ interface PlayerListProps {
   playerIDs: string[];
   /** Lay cards out in a row instead of a column. */
   horizontal?: boolean;
+  /** PlayerIDs who have passed on the current trick. */
+  passedPlayers?: string[];
 }
 
 
@@ -59,6 +61,7 @@ export function PlayerList({
   finishOrder,
   playerIDs,
   horizontal = false,
+  passedPlayers = [],
 }: PlayerListProps) {
   const numPlayers = Object.keys(players).length;
 
@@ -91,6 +94,7 @@ export function PlayerList({
         const finished = player.finished;
         const pos = finishPosition(id);
         const title = getSocialTitle(id);
+        const hasPassed = passedPlayers.includes(id);
 
         return (
           <div
@@ -100,6 +104,7 @@ export function PlayerList({
               isActive ? styles.active : '',
               isMe ? styles.me : '',
               finished ? styles.finished : '',
+              hasPassed ? styles.passed : '',
             ]
               .filter(Boolean)
               .join(' ')}
@@ -107,6 +112,7 @@ export function PlayerList({
             <div className={styles.nameRow}>
               <span className={styles.name}>{getDisplayName(id)}</span>
               {isMe && <span className={styles.meTag}>You</span>}
+              {hasPassed && <span className={styles.passBadge}>PASS</span>}
             </div>
             {title && <span className={styles.title}>{title}</span>}
             {!finished && <CardFan count={player.hand.length} />}

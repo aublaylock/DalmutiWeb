@@ -18,6 +18,10 @@ interface HandProps {
   hasMarkedReady: boolean;
   /** True if this player is (or was) involved in a tax debt this round — suppresses the "no taxation" banner after a Dalmuti finishes giving back cards. */
   hasTaxRole: boolean;
+  /** True when every player has clicked "Agree to Tax" — unlocks the give-back exchange. */
+  allPlayersReady: boolean;
+  /** True when there are unresolved tax debts (exchange hasn't happened yet). */
+  hasPendingTax: boolean;
   onPlayCards: (cardIds: string[]) => void;
   onPass: () => void;
   onGiveBackCards: (cardIds: string[]) => void;
@@ -35,6 +39,8 @@ export function Hand({
   canDeclareRevolution,
   hasMarkedReady,
   hasTaxRole,
+  allPlayersReady,
+  hasPendingTax,
   onPlayCards,
   onPass,
   onGiveBackCards,
@@ -116,53 +122,64 @@ export function Hand({
 
   const canPlay = isMyTurn && !inTaxPhase && selected.size > 0;
   const canPass = isMyTurn && !inTaxPhase && currentTrick !== null;
-  const canGiveBack = isDalmuti && selected.size === taxReceivable!.count;
+  // Exchange only unlocks after every player has agreed to the tax
+  const canGiveBack = isDalmuti && allPlayersReady && selected.size === taxReceivable!.count;
 
-  // Cards are interactive during play (on your turn) or when Dalmuti must give back
+  // Cards are interactive during play (on your turn) or when Dalmuti can give back
   const cardsInteractive = (!inTaxPhase && isMyTurn) || isDalmuti;
 
-  // Show the Ready button once any pending give-back is resolved.
-  // Peons and Merchants see it immediately; Dalmuties see it after giving back.
-  const showReadyBtn = inTaxPhase && !isDalmuti && !hasMarkedReady;
+  // Everyone (including Dalmuti) sees the Agree/Ready button before marking ready.
+  const showReadyBtn = inTaxPhase && !hasMarkedReady;
+  const readyBtnLabel = hasPendingTax ? 'Agree to Tax' : 'Ready for Round';
 
   return (
     <div className={styles.handArea}>
-      {/* Dalmuti: face-down incoming cards (contents hidden until after give-back) */}
+      {/* Dalmuti: incoming cards are hidden; show exchange prompt */}
       {isDalmuti && (
         <div className={styles.incomingSection}>
           <p className={styles.taxPrompt}>
             You are receiving {taxReceivable!.count} hidden card{taxReceivable!.count > 1 ? 's' : ''} —
             choose {taxReceivable!.count} from your hand to give back
           </p>
+          {hasMarkedReady && !allPlayersReady && (
+            <p className={styles.waitingMsg}>Waiting for all players to agree to taxes…</p>
+          )}
+          {allPlayersReady && (
+            <p className={styles.waitingMsg}>All agreed — select {taxReceivable!.count} card{taxReceivable!.count > 1 ? 's' : ''} to give back.</p>
+          )}
         </div>
       )}
 
-      {/* Peon: show which cards were automatically sent as tax */}
+      {/* Peon: show which cards were automatically staged as tax */}
       {inTaxPhase && isPeon && !isDalmuti && (
         <div className={styles.incomingSection}>
           <p className={styles.taxPrompt}>
-            Sent as tax ({taxDebt!.offeredCards.length}/{taxDebt!.count} card{taxDebt!.count > 1 ? 's' : ''}):
+            Staged as tax ({taxDebt!.offeredCards.length}/{taxDebt!.count} card{taxDebt!.count > 1 ? 's' : ''}):
           </p>
           <div className={styles.incomingCards}>
             {taxDebt!.offeredCards.map((card) => (
               <CardComponent key={card.id} card={card} />
             ))}
           </div>
-          {!hasMarkedReady && (
-            <p className={styles.waitingMsg}>Click Ready when you're satisfied.</p>
+          {hasMarkedReady && !allPlayersReady && (
+            <p className={styles.waitingMsg}>Waiting for all players to agree…</p>
           )}
-          {hasMarkedReady && (
-            <p className={styles.waitingMsg}>Waiting for the Dalmuti…</p>
+          {hasMarkedReady && allPlayersReady && (
+            <p className={styles.waitingMsg}>Waiting for the Dalmuti to complete the exchange…</p>
           )}
         </div>
       )}
 
-      {/* Merchant: no taxation (not involved in any debt this round) */}
+      {/* Merchant: no taxation */}
       {inTaxPhase && !hasTaxRole && (
         <div className={styles.incomingSection}>
-          <p className={styles.taxPrompt}>
-            No taxation for you this round.
-          </p>
+          <p className={styles.taxPrompt}>No taxation for you this round.</p>
+          {hasMarkedReady && !allPlayersReady && (
+            <p className={styles.waitingMsg}>Waiting for all players to agree…</p>
+          )}
+          {hasMarkedReady && allPlayersReady && (
+            <p className={styles.waitingMsg}>Waiting for the exchange to complete…</p>
+          )}
         </div>
       )}
 
@@ -198,7 +215,8 @@ export function Hand({
             </button>
           </>
         )}
-        {isDalmuti && (
+        {/* Give Back only becomes clickable once all players have agreed */}
+        {isDalmuti && hasMarkedReady && (
           <button
             className={styles.taxBtn}
             onClick={handleGiveBack}
@@ -209,12 +227,17 @@ export function Hand({
         )}
         {showReadyBtn && (
           <button className={styles.readyBtn} onClick={onMarkReady}>
-            Ready for Round
+            {readyBtnLabel}
           </button>
         )}
         {inTaxPhase && hasMarkedReady && !isDalmuti && (
           <button className={styles.readyBtn} disabled>
-            Ready ✓
+            Agreed ✓
+          </button>
+        )}
+        {inTaxPhase && hasMarkedReady && isDalmuti && !allPlayersReady && (
+          <button className={styles.readyBtn} disabled>
+            Agreed ✓
           </button>
         )}
         {inTaxPhase && canDeclareRevolution && (

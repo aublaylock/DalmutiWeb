@@ -202,6 +202,11 @@ export function Board({
 
   // During round-over, suppress active-turn highlights (no one is "playing")
   const activePlayerForList = inTaxPhase || isRoundOver ? '' : ctx.currentPlayer;
+  // Pass badges only make sense mid-trick in the play phase
+  const passedPlayersForList = inTaxPhase || isRoundOver ? [] : G.passedPlayers;
+  const allPlayersReady = G.readyPlayers.length >= n;
+  // Show "Agree to Tax" label when there are unresolved debts; "Ready for Round" after revolution
+  const hasPendingTax = inTaxPhase && G.taxDebts.some((d) => d.count > 0);
 
   return (
     <div className={styles.board}>
@@ -231,6 +236,7 @@ export function Board({
             matchData={matchData}
             finishOrder={G.finishOrder}
             playerIDs={positions.top}
+            passedPlayers={passedPlayersForList}
             horizontal
           />
         </div>
@@ -244,6 +250,7 @@ export function Board({
             matchData={matchData}
             finishOrder={G.finishOrder}
             playerIDs={positions.left}
+            passedPlayers={passedPlayersForList}
           />
         </div>
 
@@ -260,6 +267,7 @@ export function Board({
             matchData={matchData}
             finishOrder={G.finishOrder}
             playerIDs={positions.right}
+            passedPlayers={passedPlayersForList}
           />
         </div>
 
@@ -272,6 +280,7 @@ export function Board({
             matchData={matchData}
             finishOrder={G.finishOrder}
             playerIDs={positions.bottom}
+            passedPlayers={passedPlayersForList}
             horizontal
           />
         </div>
@@ -287,6 +296,8 @@ export function Board({
           taxDebt={myTaxDebt}
           taxReceivable={myTaxReceivable}
           hasTaxRole={hasTaxRole}
+          allPlayersReady={allPlayersReady}
+          hasPendingTax={hasPendingTax}
           onPlayCards={(ids) => moves.playCards(ids)}
           onPass={() => moves.pass()}
           onGiveBackCards={(ids) => moves.giveBackCards(playerID, ids)}
