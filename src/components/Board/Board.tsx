@@ -122,6 +122,19 @@ export function Board({
   const myPlayer = playerID !== null ? G.players[playerID] : null;
   const isMyTurn = isActive && ctx.currentPlayer === playerID;
   const inTaxPhase = ctx.phase === 'tax';
+
+  // Play a reminder sound 5 s after it becomes the player's turn (if still their turn).
+  const isMyTurnRef = useRef(isMyTurn);
+  isMyTurnRef.current = isMyTurn;
+  useEffect(() => {
+    if (!isMyTurn) return;
+    const timer = setTimeout(() => {
+      if (!isMyTurnRef.current) return;
+      const audio = new Audio('/yourTurn.mp3');
+      audio.play().catch(() => {/* autoplay policy — ignore */});
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [isMyTurn]); // eslint-disable-line react-hooks/exhaustive-deps
   const n = ctx.numPlayers;
 
   // ---- Lobby phase: waiting room before the game starts ----
