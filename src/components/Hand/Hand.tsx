@@ -121,7 +121,7 @@ export function Hand({
   const isPeon = taxDebt !== null;
 
   const canPlay = isMyTurn && !inTaxPhase && selected.size > 0;
-  const canPass = isMyTurn && !inTaxPhase && currentTrick !== null;
+  const canPass = isMyTurn && !inTaxPhase && currentTrick !== null && selected.size === 0;
   // Exchange only unlocks after every player has agreed to the tax
   const canGiveBack = isDalmuti && allPlayersReady && selected.size === taxReceivable!.count;
 

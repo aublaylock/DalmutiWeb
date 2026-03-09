@@ -123,6 +123,16 @@ export function Board({
   const isMyTurn = isActive && ctx.currentPlayer === playerID;
   const inTaxPhase = ctx.phase === 'tax';
 
+  // Play pass sound whenever a new player passes.
+  const passedCountRef = useRef(G.passedPlayers.length);
+  useEffect(() => {
+    if (G.passedPlayers.length > passedCountRef.current) {
+      const audio = new Audio('/pass.mp3');
+      audio.play().catch(() => {/* autoplay policy — ignore */});
+    }
+    passedCountRef.current = G.passedPlayers.length;
+  }, [G.passedPlayers.length]);
+
   // Play a reminder sound 5 s after it becomes the player's turn (if still their turn).
   const isMyTurnRef = useRef(isMyTurn);
   isMyTurnRef.current = isMyTurn;
