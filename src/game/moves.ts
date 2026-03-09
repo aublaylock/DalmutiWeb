@@ -112,36 +112,49 @@ export const pass: Move<DalmutiState> = ({ G, ctx }) => {
 
 /**
  * Called by the room owner (player "0") to start the game.
- * - Shuffles all player IDs into G.seatOrder (the fixed play order).
- * - Draws initial social ranks by randomly assigning positions 1..N,
- *   equivalent to each player drawing a unique card from a shuffled deck.
- *   This populates G.finishOrder and socialRank so that round-1 taxation
- *   works exactly like every subsequent round.
+ * - Shuffles active (non-kicked) player IDs into G.seatOrder.
+ * - Draws initial social ranks for active players only.
+ * - Deals cards only to active players.
  */
 export const startGame: Move<DalmutiState> = ({ G, ctx, random }) => {
   if (ctx.currentPlayer !== '0') return INVALID_MOVE;
 
-  const playerIDs = Object.keys(G.players);
-  const n = ctx.numPlayers;
+  // Active players are those not kicked; require at least 4
+  const activeIDs = G.activePlayerIDs.filter(id => !G.kickedPlayerIDs.includes(id));
+  if (activeIDs.length < 4) return INVALID_MOVE;
+
+  // Sync activePlayerIDs to only the non-kicked set
+  G.activePlayerIDs = activeIDs;
+
+  const n = activeIDs.length;
 
   // Randomise seating order for the play phase
-  G.seatOrder = random.Shuffle([...playerIDs]);
+  G.seatOrder = random.Shuffle([...activeIDs]);
 
-  // Draw initial social ranks: shuffle player IDs to assign ranks 1..N.
-  // Index 0 → Great Dalmuti (rank 1), last index → Greater Peon (rank N).
-  const initialOrder = random.Shuffle([...playerIDs]);
+  // Draw initial social ranks: shuffle active IDs to assign ranks 1..N.
+  const initialOrder = random.Shuffle([...activeIDs]);
   G.finishOrder = initialOrder;
   initialOrder.forEach((id, index) => {
     G.players[id].socialRank = index + 1;
   });
 
-  // Deal the first hand (server-side so random.Shuffle is available)
-  for (const id of playerIDs) {
+  // Mark inactive/kicked players so the play phase skips them
+  for (const id of Object.keys(G.players)) {
+    if (!activeIDs.includes(id)) {
+      G.players[id].hand = [];
+      G.players[id].finished = true;
+      G.players[id].finishPosition = null;
+      G.players[id].socialRank = null;
+    }
+  }
+
+  // Deal the first hand to active players only
+  for (const id of activeIDs) {
     G.players[id].hand = [];
   }
   const deck = random.Shuffle(buildDeck());
   deck.forEach((card, i) => {
-    G.players[String(i % n)].hand.push(card);
+    G.players[activeIDs[i % n]].hand.push(card);
   });
 
   // Set up round-1 tax debts based on the randomly drawn initial ranks
@@ -164,7 +177,6 @@ export const startGame: Move<DalmutiState> = ({ G, ctx, random }) => {
   }
 
   // Auto-stage each peon's best non-Joker cards as tax payment.
-  // Jokers (rank 0) count as rank 13 for taxation — never forcibly taken.
   for (const debt of G.taxDebts) {
     const payer = G.players[debt.fromPlayerID];
     const sortedHand = [...payer.hand].sort((a, b) => {
@@ -180,21 +192,86 @@ export const startGame: Move<DalmutiState> = ({ G, ctx, random }) => {
 };
 
 // ---------------------------------------------------------------------------
+// Host / Joining Moves
+// ---------------------------------------------------------------------------
+
+/**
+ * Called by the host to remove a player from active participation.
+ * Available in lobby (regular move, host is currentPlayer) and during
+ * roundOver (stage move, callerID identifies the host).
+ * Kicked players are permanently excluded unless reinstated via G state edits.
+ */
+export const kickPlayer: Move<DalmutiState> = ({ G, ctx }, callerID: string, targetID: string) => {
+  // Auth: in regular (lobby) moves ctx.currentPlayer is reliable;
+  // in stage moves we rely on callerID — accept both.
+  const caller = callerID ?? ctx.currentPlayer;
+  if (caller !== '0') return INVALID_MOVE;
+  if (targetID === '0') return INVALID_MOVE; // can't kick the host
+  if (!G.players[targetID]) return INVALID_MOVE;
+
+  if (!G.kickedPlayerIDs.includes(targetID)) {
+    G.kickedPlayerIDs.push(targetID);
+  }
+  G.activePlayerIDs = G.activePlayerIDs.filter(id => id !== targetID);
+  G.pendingJoinIDs = G.pendingJoinIDs.filter(id => id !== targetID);
+  G.players[targetID].hand = [];
+  G.players[targetID].finished = true;
+  G.players[targetID].finishPosition = null;
+  G.players[targetID].socialRank = null;
+};
+
+/**
+ * Called by a player who wants to join the game at the next round start.
+ * Only available during the roundOver phase (stage move).
+ * New players are added as merchants in advanceRound.
+ */
+export const joinMidGame: Move<DalmutiState> = ({ G }, callerID: string) => {
+  if (!callerID || !G.players[callerID]) return INVALID_MOVE;
+  if (G.kickedPlayerIDs.includes(callerID)) return INVALID_MOVE;
+  if (G.activePlayerIDs.includes(callerID)) return INVALID_MOVE;
+  if (!G.pendingJoinIDs.includes(callerID)) {
+    G.pendingJoinIDs.push(callerID);
+  }
+};
+
+// ---------------------------------------------------------------------------
 // Round-Over Phase Moves
 // ---------------------------------------------------------------------------
 
 /**
  * Called by the room owner (player "0") to advance past the round-over screen.
- * The Board auto-fires this after a 15-second countdown.
+ * Now a stage move — callerID identifies the host.
  *
  * Runs server-side (client: false) so random.Shuffle is available.
- * Does all round setup here — card dealing, taxation, flag resets — rather
- * than in taxPhase.onBegin, because the random plugin is not reliably available
- * in phase hooks in boardgame.io 0.50.x. Setting G.roundOverDone = true at the
- * end signals roundOverPhase.endIf to transition to the tax phase.
+ * Also processes pending mid-game joiners and removed (kicked) players.
  */
-export const advanceRound: Move<DalmutiState> = ({ G, ctx, random }) => {
-  const n = ctx.numPlayers;
+export const advanceRound: Move<DalmutiState> = ({ G, random }, callerID: string) => {
+  if (callerID !== '0') return INVALID_MOVE;
+
+  // Incorporate any players who requested to join mid-game
+  for (const newID of G.pendingJoinIDs) {
+    if (!G.kickedPlayerIDs.includes(newID) && !G.activePlayerIDs.includes(newID)) {
+      G.activePlayerIDs.push(newID);
+    }
+  }
+  G.pendingJoinIDs = [];
+
+  // Build the rank order for the new round:
+  //  - Start from last round's finish order (determines tax payers)
+  //  - Filter out any since-kicked players
+  //  - Append new joiners at the merchant position (after the first 2 Dalmuties)
+  const prevOrder = G.finishOrder.filter(id => G.activePlayerIDs.includes(id));
+  const newJoiners = G.activePlayerIDs.filter(id => !prevOrder.includes(id));
+  const insertPos = Math.min(2, prevOrder.length);
+  const mergedOrder = [...prevOrder];
+  mergedOrder.splice(insertPos, 0, ...newJoiners);
+
+  // Assign social ranks based on the merged order
+  mergedOrder.forEach((id, index) => {
+    G.players[id].socialRank = index + 1;
+  });
+
+  const n = mergedOrder.length;
 
   // Clear play-area state left over from the previous round
   G.currentTrick = null;
@@ -207,39 +284,44 @@ export const advanceRound: Move<DalmutiState> = ({ G, ctx, random }) => {
   G.isGreaterRevolution = false;
   G.readyPlayers = [];
 
-  // Deal a fresh shuffled deck to all players
+  // Clear all hands; then deal to active players only
   for (const id of Object.keys(G.players)) {
     G.players[id].hand = [];
+    if (G.activePlayerIDs.includes(id)) {
+      G.players[id].finished = false;
+      G.players[id].finishPosition = null;
+    } else {
+      // Inactive/kicked players stay finished throughout
+      G.players[id].finished = true;
+      G.players[id].finishPosition = null;
+      G.players[id].socialRank = null;
+    }
   }
   const deck = random.Shuffle(buildDeck());
   deck.forEach((card, i) => {
-    G.players[String(i % n)].hand.push(card);
+    G.players[mergedOrder[i % n]].hand.push(card);
   });
 
-  // Set up tax debts based on the finish order from the round that just ended.
-  // G.finishOrder is populated by playPhase.onEnd and is still intact here
-  // (playPhase.onBegin resets it later when the new play phase begins).
-  const order = G.finishOrder;
+  // Set up tax debts based on the merged rank order
   G.taxDebts = [];
-  if (order.length >= 2) {
+  if (n >= 2) {
     G.taxDebts.push({
-      fromPlayerID: order[n - 1],
-      toPlayerID: order[0],
+      fromPlayerID: mergedOrder[n - 1],
+      toPlayerID: mergedOrder[0],
       count: 2,
       offeredCards: [],
     });
   }
-  if (order.length >= 4) {
+  if (n >= 4) {
     G.taxDebts.push({
-      fromPlayerID: order[n - 2],
-      toPlayerID: order[1],
+      fromPlayerID: mergedOrder[n - 2],
+      toPlayerID: mergedOrder[1],
       count: 1,
       offeredCards: [],
     });
   }
 
   // Auto-stage each peon's best non-Joker cards as tax payment.
-  // Jokers (rank 0) count as rank 13 for taxation — never forcibly taken.
   for (const debt of G.taxDebts) {
     const payer = G.players[debt.fromPlayerID];
     const sortedHand = [...payer.hand].sort((a, b) => {
@@ -251,14 +333,6 @@ export const advanceRound: Move<DalmutiState> = ({ G, ctx, random }) => {
     const bestIds = new Set(bestCards.map((c) => c.id));
     payer.hand = payer.hand.filter((c) => !bestIds.has(c.id));
     debt.offeredCards = bestCards;
-  }
-
-  // Reset per-player round state so playPhase.endIf doesn't see stale finished
-  // flags from the previous round. playPhase.onBegin does the same reset, but
-  // boardgame.io 0.50.x can evaluate endIf before onBegin in certain transitions.
-  for (const id of Object.keys(G.players)) {
-    G.players[id].finished = false;
-    G.players[id].finishPosition = null;
   }
 
   // Signal roundOverPhase.endIf to transition to the tax phase
@@ -347,9 +421,9 @@ export const declareRevolution: Move<DalmutiState> = ({ G }, callerID: string) =
  * activePlayers stage mode ctx.currentPlayer reflects the *turn's* current
  * player, not the player who invoked the stage move.
  */
-export const giveBackCards: Move<DalmutiState> = ({ G, ctx }, callerID: string, cardIds: string[]) => {
-  // Exchange is locked until every player has agreed (markReady) to the tax
-  if (G.readyPlayers.length < ctx.numPlayers) return INVALID_MOVE;
+export const giveBackCards: Move<DalmutiState> = ({ G }, callerID: string, cardIds: string[]) => {
+  // Exchange is locked until every active player has agreed (markReady) to the tax
+  if (G.readyPlayers.length < G.activePlayerIDs.length) return INVALID_MOVE;
 
   const playerID = callerID;
 

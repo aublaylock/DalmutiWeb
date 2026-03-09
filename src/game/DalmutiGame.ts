@@ -37,6 +37,8 @@ export const DalmutiGame: Game<DalmutiState> = {
       };
     }
 
+    const allIDs = Array.from({ length: ctx.numPlayers }, (_, i) => String(i));
+
     return {
       players,
       currentTrick: null,
@@ -51,6 +53,9 @@ export const DalmutiGame: Game<DalmutiState> = {
       pendingNewTrick: false,
       readyPlayers: [],
       roundOverDone: false,
+      activePlayerIDs: [...allIDs],
+      pendingJoinIDs: [],
+      kickedPlayerIDs: [],
     };
   },
 

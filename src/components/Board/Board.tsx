@@ -13,47 +13,37 @@ export type DalmutiBoardProps = BoardProps<DalmutiState>;
 // ---------------------------------------------------------------------------
 
 /**
- * Assign player IDs to table positions based on social rank (or seatOrder for
- * round 1 when no ranks exist yet).
+ * Assign active player IDs to table positions based on social rank.
  *
  * Layout (by social rank, ascending):
  *   Left   → rank 1 (Great Dalmuti)
  *   Top    → ranks 2–(topCount+1)
  *   Right  → next rightCount players
  *   Bottom → remaining players through rank N (Greater Peon)
- *
- * Counts by player count:
- *   4p → L:1 T:1 R:1 B:1
- *   5p → L:1 T:2 R:1 B:1
- *   6p → L:1 T:2 R:1 B:2
- *   7p → L:1 T:2 R:2 B:2
- *   8p → L:1 T:2 R:2 B:3
  */
 function getTablePositions(
   G: DalmutiState,
-  n: number,
+  myID: string | null,
 ): { left: string[]; top: string[]; right: string[]; bottom: string[] } {
-  const allIDs = Object.keys(G.players);
+  // Only show active players in positions (excludes self — rendered in Hand area below)
+  const allIDs = G.activePlayerIDs.filter(id => id !== myID);
+  const n = allIDs.length;
 
   // Sort by social rank when available, otherwise by seatOrder index
   const sorted = [...allIDs].sort((a, b) => {
-    const ra = G.players[a].socialRank;
-    const rb = G.players[b].socialRank;
-    if (ra !== null && rb !== null) return ra - rb;
+    const ra = G.players[a]?.socialRank;
+    const rb = G.players[b]?.socialRank;
+    if (ra !== null && ra !== undefined && rb !== null && rb !== undefined) return ra - rb;
     const ia = G.seatOrder.indexOf(a);
     const ib = G.seatOrder.indexOf(b);
     return ia - ib;
   });
 
-  const topCount = n >= 5 ? 2 : 1;
-  const rightCount = n >= 7 ? 2 : 1;
+  const topCount = n >= 4 ? 2 : 1;
+  const rightCount = n >= 6 ? 2 : 1;
 
-  // Bottom is reversed so the rank order continues clockwise:
-  // ...right (top→bottom) → bottom (right→left) → left.
-  // Without reversal the bottom row would go left→right in ascending rank,
-  // placing the Greater Peon on the right instead of the left.
   return {
-    left: [sorted[0]],
+    left: sorted.slice(0, 1),
     top: sorted.slice(1, 1 + topCount),
     right: sorted.slice(1 + topCount, 1 + topCount + rightCount),
     bottom: sorted.slice(1 + topCount + rightCount).reverse(),
@@ -84,16 +74,8 @@ export function Board({
   const movesRef = useRef(moves);
   movesRef.current = moves;
 
-  const [countdown, setCountdown] = useState(15);
   // Transient revolution announcement — shown for 4 s then auto-dismissed.
   const [revolutionAnnouncement, setRevolutionAnnouncement] = useState<string | null>(null);
-
-  // Auto-advance from the roundOver phase after 15 s (owner only).
-  useEffect(() => {
-    if (ctx.phase !== 'roundOver' || playerID !== '0') return;
-    const timer = setTimeout(() => movesRef.current.advanceRound(), 15000);
-    return () => clearTimeout(timer);
-  }, [ctx.phase, playerID]);
 
   // Show a transient revolution announcement for 4 s when one is declared.
   useEffect(() => {
@@ -109,19 +91,12 @@ export function Board({
     return () => clearTimeout(timer);
   }, [G.revolutionDeclaredBy]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Drive the visible countdown for all players.
-  useEffect(() => {
-    if (ctx.phase !== 'roundOver') {
-      setCountdown(15);
-      return;
-    }
-    const interval = setInterval(() => setCountdown((c) => Math.max(0, c - 1)), 1000);
-    return () => clearInterval(interval);
-  }, [ctx.phase]);
-
+  const isHost = playerID === '0';
   const myPlayer = playerID !== null ? G.players[playerID] : null;
   const isMyTurn = isActive && ctx.currentPlayer === playerID;
   const inTaxPhase = ctx.phase === 'tax';
+  // The current player is "active" (participates in gameplay) if in activePlayerIDs
+  const isActivePlayer = playerID !== null && G.activePlayerIDs.includes(playerID);
 
   // Play pass sound whenever a new player passes.
   const passedCountRef = useRef(G.passedPlayers.length);
@@ -145,13 +120,16 @@ export function Board({
     }, 5000);
     return () => clearTimeout(timer);
   }, [isMyTurn]); // eslint-disable-line react-hooks/exhaustive-deps
-  const n = ctx.numPlayers;
+
+  // Number of active players — used for title calculation throughout
+  const n = G.activePlayerIDs.length;
 
   // ---- Lobby phase: waiting room before the game starts ----
   if (ctx.phase === 'lobby') {
     const joinedCount = matchData?.filter((p) => p.name).length ?? 0;
-    const isOwner = playerID === '0';
-    const canStart = isOwner && isActive && joinedCount >= n;
+    const kickedCount = G.kickedPlayerIDs.length;
+    const activeJoinedCount = joinedCount - kickedCount;
+    const canStart = isHost && activeJoinedCount >= 4;
 
     return (
       <div className={styles.board}>
@@ -163,25 +141,45 @@ export function Board({
         </header>
         <div className={styles.lobbyWaiting}>
           <h2 className={styles.lobbyHeading}>
-            Players ({joinedCount} / {n})
+            Players ({activeJoinedCount} joined)
           </h2>
           <ul className={styles.playerRoster}>
-            {matchData?.map((p) => (
-              <li key={p.id} className={p.name ? styles.rosterJoined : styles.rosterEmpty}>
-                {p.name ?? 'Waiting…'}
-              </li>
-            ))}
+            {matchData?.map((p) => {
+              const pid = String(p.id);
+              const isKicked = G.kickedPlayerIDs.includes(pid);
+              const isJoined = !!p.name;
+              return (
+                <li
+                  key={p.id}
+                  className={isKicked ? styles.rosterKicked : isJoined ? styles.rosterJoined : styles.rosterEmpty}
+                >
+                  <span>{isKicked ? `${p.name ?? 'Player ' + (p.id + 1)} (kicked)` : p.name ?? 'Waiting…'}</span>
+                  {isHost && isJoined && pid !== '0' && !isKicked && (
+                    <button
+                      className={styles.kickBtn}
+                      onClick={() => moves.kickPlayer(playerID, pid)}
+                    >
+                      Kick
+                    </button>
+                  )}
+                </li>
+              );
+            })}
           </ul>
-          {isOwner ? (
+          {isHost ? (
             <button
               className={styles.startBtn}
               onClick={() => moves.startGame()}
               disabled={!canStart}
             >
-              {canStart ? 'Start Game' : `Waiting for players (${joinedCount}/${n})`}
+              {canStart
+                ? 'Start Game'
+                : activeJoinedCount < 4
+                  ? `Need at least 4 players (${activeJoinedCount} active)`
+                  : 'Start Game'}
             </button>
           ) : (
-            <p className={styles.lobbyWaitMsg}>Waiting for the owner to start the game…</p>
+            <p className={styles.lobbyWaitMsg}>Waiting for the host to start the game…</p>
           )}
         </div>
       </div>
@@ -214,22 +212,23 @@ export function Board({
 
   const hasMarkedReady = playerID !== null && G.readyPlayers.includes(playerID);
 
-  // True if this player is involved in any tax debt this round (as payer OR receiver),
-  // even after the debt has been resolved. Used to suppress the "no taxation" banner
-  // for Dalmuties who have already given back their cards.
   const hasTaxRole = inTaxPhase && playerID !== null &&
     G.taxDebts.some((d) => d.fromPlayerID === playerID || d.toPlayerID === playerID);
 
-  // Table layout: assign player IDs to positions by social rank
-  const positions = getTablePositions(G, n);
+  // Table layout: assign active player IDs to positions by social rank (excludes self)
+  const positions = getTablePositions(G, playerID);
 
-  // During round-over, suppress active-turn highlights (no one is "playing")
+  // During round-over, suppress active-turn highlights and pass badges
   const activePlayerForList = inTaxPhase || isRoundOver ? '' : ctx.currentPlayer;
-  // Pass badges only make sense mid-trick in the play phase
   const passedPlayersForList = inTaxPhase || isRoundOver ? [] : G.passedPlayers;
   const allPlayersReady = G.readyPlayers.length >= n;
-  // Show "Agree to Tax" label when there are unresolved debts; "Ready for Round" after revolution
   const hasPendingTax = inTaxPhase && G.taxDebts.some((d) => d.count > 0);
+
+  // Non-active player in roundOver: show "Join Next Round" option
+  const canJoinMidGame = isRoundOver && playerID !== null &&
+    !G.activePlayerIDs.includes(playerID) &&
+    !G.kickedPlayerIDs.includes(playerID);
+  const hasPendingJoin = playerID !== null && G.pendingJoinIDs.includes(playerID);
 
   return (
     <div className={styles.board}>
@@ -294,7 +293,7 @@ export function Board({
           />
         </div>
 
-        {/* Bottom: Greater Peon (rank N) and adjacent low-ranked players */}
+        {/* Bottom: Greater Peon and adjacent low-ranked players */}
         <div className={styles.bottomPlayers}>
           <PlayerList
             players={G.players}
@@ -309,8 +308,8 @@ export function Board({
         </div>
       </div>
 
-      {/* Hand: hidden during round-over since the round is complete */}
-      {!isRoundOver && myPlayer && (
+      {/* Hand: only for active players, hidden during round-over */}
+      {!isRoundOver && isActivePlayer && myPlayer && (
         <Hand
           cards={myPlayer.hand}
           isMyTurn={isMyTurn}
@@ -331,7 +330,7 @@ export function Board({
         />
       )}
 
-      {/* Round-over overlay: transparent panel floats over the board */}
+      {/* Round-over overlay */}
       {isRoundOver && (
         <div className={styles.roundOverOverlay}>
           <div className={styles.roundOverBox}>
@@ -345,13 +344,54 @@ export function Board({
                     <span className={styles.finishPos}>#{i + 1}</span>
                     <span className={styles.finishName}>{name}</span>
                     {title && <span className={styles.finishTitle}>{title}</span>}
+                    {isHost && id !== '0' && (
+                      <button
+                        className={styles.kickBtnSmall}
+                        onClick={() => moves.kickPlayer(playerID, id)}
+                        title="Kick player"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </li>
+                );
+              })}
+              {/* Show players who requested to join next round */}
+              {G.pendingJoinIDs.map((id) => {
+                const name = matchData?.find((p) => String(p.id) === id)?.name ?? `Player ${id}`;
+                return (
+                  <li key={id} className={styles.finishItem}>
+                    <span className={styles.finishPos}>—</span>
+                    <span className={styles.finishName}>{name}</span>
+                    <span className={styles.finishTitle}>Joining next round</span>
                   </li>
                 );
               })}
             </ol>
-            <p className={styles.countdownMsg}>
-              Next round starting in <strong>{countdown}</strong>s…
-            </p>
+
+            {/* Non-active player: request to join next round */}
+            {canJoinMidGame && (
+              <button
+                className={styles.startBtn}
+                onClick={() => moves.joinMidGame(playerID)}
+                disabled={hasPendingJoin}
+                style={{ marginBottom: '12px' }}
+              >
+                {hasPendingJoin ? 'Joining next round…' : 'Join Next Round'}
+              </button>
+            )}
+
+            {/* Host: start next round */}
+            {isHost ? (
+              <button
+                className={styles.startBtn}
+                onClick={() => moves.advanceRound(playerID)}
+              >
+                Start Next Round
+              </button>
+            ) : (
+              <p className={styles.countdownMsg}>Waiting for host to start the next round…</p>
+            )}
           </div>
         </div>
       )}

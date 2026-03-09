@@ -1,6 +1,6 @@
 import type { PhaseConfig, Move } from 'boardgame.io';
 import type { DalmutiState } from './types';
-import { playCards, pass, giveBackCards, declareRevolution, startGame, markReady, advanceRound } from './moves';
+import { playCards, pass, giveBackCards, declareRevolution, startGame, markReady, advanceRound, kickPlayer, joinMidGame } from './moves';
 
 // ---------------------------------------------------------------------------
 // Lobby Phase
@@ -15,6 +15,8 @@ export const lobbyPhase: PhaseConfig<DalmutiState> = {
 
   moves: {
     startGame: { move: startGame, client: false } as Move<DalmutiState>,
+    // Host-only kick available in lobby before the game starts
+    kickPlayer: { move: kickPlayer, client: false } as Move<DalmutiState>,
   },
 
   // Phase ends as soon as seatOrder has been populated by startGame
@@ -24,7 +26,7 @@ export const lobbyPhase: PhaseConfig<DalmutiState> = {
 
   turn: {
     // Keep the turn permanently on player "0" (the room owner).
-    // Other players cannot make moves; they simply wait.
+    // kickPlayer and startGame both check ctx.currentPlayer or callerID.
     order: {
       first: () => 0,
       next: () => 0,
@@ -65,12 +67,10 @@ export const taxPhase: PhaseConfig<DalmutiState> = {
     G.taxDebts = [];
   },
 
-  // Phase ends when all debts are resolved AND every player has clicked Ready.
-  // For round 1: no debts (allResolved = true immediately), so only readyPlayers
-  // gate applies — players must explicitly confirm before play starts.
-  endIf: ({ G, ctx }) => {
+  // Phase ends when all debts are resolved AND every active player has clicked Ready.
+  endIf: ({ G }) => {
     const allResolved = G.taxDebts.every((d) => d.count === 0);
-    const allReady = G.readyPlayers.length >= ctx.numPlayers;
+    const allReady = G.readyPlayers.length >= G.activePlayerIDs.length;
     return (allResolved && allReady) ? true : undefined;
   },
 
@@ -99,30 +99,36 @@ export const taxPhase: PhaseConfig<DalmutiState> = {
 // ---------------------------------------------------------------------------
 // Round-Over Phase
 // ---------------------------------------------------------------------------
-// Sits between playPhase and taxPhase. Displays round results for 15 seconds
-// then automatically advances. The room owner's client fires advanceRound()
-// after the countdown; all clients see the same results screen.
+// Sits between playPhase and taxPhase. Displays round results and waits for
+// the host to click "Start Next Round". All players see the results screen;
+// non-active players can request to join via joinMidGame.
 
 export const roundOverPhase: PhaseConfig<DalmutiState> = {
   start: false,
 
   next: 'tax',
 
-  // Ends as soon as the owner's 15-second timer fires advanceRound and sets
-  // G.roundOverDone. Using endIf (declarative) instead of events.endPhase()
-  // (imperative, unreliable inside moves in boardgame.io 0.50.x).
+  // Ends when the host fires advanceRound (sets G.roundOverDone).
   endIf: ({ G }) => G.roundOverDone ? true : undefined,
 
-  moves: {
-    advanceRound: { move: advanceRound, client: false } as Move<DalmutiState>,
-  },
-
   turn: {
-    // Pin the active turn to player "0" (the room owner) so only their
-    // client needs to fire advanceRound after the 15-second countdown.
-    // playOrder must be explicitly set here: the play phase leaves a
-    // rank-sorted playOrder in ctx, and without overriding it first: () => 0
-    // would give the Great Dalmuti (not player "0") as currentPlayer.
+    // All players are placed in a stage so non-active players can joinMidGame
+    // and the host can advanceRound / kickPlayer from any seat.
+    // Auth is enforced via callerID checks inside each move.
+    activePlayers: {
+      all: 'roundOverWait',
+    },
+    stages: {
+      roundOverWait: {
+        moves: {
+          advanceRound: { move: advanceRound, client: false } as Move<DalmutiState>,
+          kickPlayer: { move: kickPlayer, client: false } as Move<DalmutiState>,
+          joinMidGame: { move: joinMidGame, client: false } as Move<DalmutiState>,
+        },
+      },
+    },
+    // Reset playOrder so player "0" is index 0 regardless of the rank-sorted
+    // order left over from the play phase.
     order: {
       playOrder: ({ ctx }) =>
         Array.from({ length: ctx.numPlayers }, (_, i) => String(i)),
@@ -148,10 +154,12 @@ export const playPhase: PhaseConfig<DalmutiState> = {
     G.lastPlayerToPlay = null;
     G.passedPlayers = [];
     G.pendingNewTrick = false;
-    // Reset per-round player state
+    // Reset per-round state for active players only; inactive/kicked stay finished
     for (const id of Object.keys(G.players)) {
-      G.players[id].finished = false;
-      G.players[id].finishPosition = null;
+      if (G.activePlayerIDs.includes(id)) {
+        G.players[id].finished = false;
+        G.players[id].finishPosition = null;
+      }
     }
     G.finishOrder = [];
   },
@@ -247,9 +255,9 @@ export const playPhase: PhaseConfig<DalmutiState> = {
       // Social ranks are always set before the play phase starts (by startGame
       // on round 1, or by playPhase.onEnd for subsequent rounds).
       playOrder: ({ G }) =>
-        Object.keys(G.players).sort(
-          (a, b) => (G.players[a].socialRank ?? 0) - (G.players[b].socialRank ?? 0)
-        ),
+        Object.keys(G.players)
+          .filter(id => G.activePlayerIDs.includes(id))
+          .sort((a, b) => (G.players[a].socialRank ?? 0) - (G.players[b].socialRank ?? 0)),
 
       // Great Dalmuti (rank 1) is always at index 0 of the rank-sorted playOrder.
       // Subsequent trick leadership is handled by turn.endIf's { next } return.

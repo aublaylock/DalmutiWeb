@@ -20,7 +20,7 @@ function CardFan({ count }: { count: number }) {
         return (
           <img
             key={i}
-            src="/cards/back.png"
+            src="/cards/back.jpeg"
             alt=""
             aria-hidden="true"
             className={styles.fanCard}

@@ -99,4 +99,14 @@ export interface DalmutiState {
   // Avoids relying on events.endPhase() from inside a move, which is
   // unreliable in boardgame.io 0.50.x.
   roundOverDone: boolean;
+
+  // PlayerIDs currently active in the game (deal/tax/play applies to these).
+  // All slots start active; kicked players are removed; mid-game joiners are added.
+  activePlayerIDs: string[];
+
+  // PlayerIDs waiting to join at the next advanceRound call.
+  pendingJoinIDs: string[];
+
+  // PlayerIDs permanently banned from participating (kicked by the host).
+  kickedPlayerIDs: string[];
 }

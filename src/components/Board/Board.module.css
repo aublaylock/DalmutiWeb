@@ -186,10 +186,6 @@
   margin: 0;
 }
 
-.countdownMsg strong {
-  color: var(--color-text);
-}
-
 /* ---- Lobby waiting room ---- */
 
 .lobbyWaiting {
@@ -221,11 +217,59 @@
 .rosterJoined {
   color: var(--color-text);
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .rosterEmpty {
   color: var(--color-text-muted);
   font-style: italic;
+}
+
+.rosterKicked {
+  color: var(--color-text-muted);
+  text-decoration: line-through;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.kickBtn {
+  padding: 2px 10px;
+  border-radius: 99px;
+  border: 1px solid var(--color-danger);
+  background: transparent;
+  color: var(--color-danger);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+
+.kickBtn:hover {
+  background: var(--color-danger);
+  color: #fff;
+}
+
+.kickBtnSmall {
+  padding: 1px 7px;
+  border-radius: 99px;
+  border: 1px solid var(--color-danger);
+  background: transparent;
+  color: var(--color-danger);
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: background 0.15s;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.kickBtnSmall:hover {
+  background: var(--color-danger);
+  color: #fff;
 }
 
 .startBtn {

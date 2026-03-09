@@ -15,14 +15,14 @@ interface CardProps {
  * Derive the public URL for a card image from the card object.
  *
  * Deck ID formats (from deck.ts):
- *   Jesters  → "jester-{seq}"  (seq 0 → jester-1.png, seq 1 → jester-2.png)
+ *   Jesters  → "jester-{seq}"  (seq 0 → jester-1.jpeg, seq 1 → jester-2.jpeg)
  *   Regular  → "r{rank}-{copy}-{seq}"  (rank 1–12, copy 0-indexed)
- *              → "{rank:02d}-{copy+1:02d}.png
+ *              → "{rank:02d}-{copy+1:02d}.jpeg
  */
 function getCardImageUrl(card: Card): string {
   if (card.rank === 0) {
     const seq = parseInt(card.id.split('-')[1], 10);
-    return `/cards/jester-${seq + 1}.png`;
+    return `/cards/jester-${seq + 1}.jpeg`;
   }
   // "r{rank}-{copy}-{seq}"
   const parts = card.id.split('-');
@@ -30,11 +30,11 @@ function getCardImageUrl(card: Card): string {
   const copy = parseInt(parts[1], 10);
   const rankStr = rank.toString().padStart(2, '0');
   const copyStr = (copy + 1).toString().padStart(2, '0');
-  return `/cards/${rankStr}-${copyStr}.png`;
+  return `/cards/${rankStr}-${copyStr}.jpeg`;
 }
 
 export function CardComponent({ card, selected, onClick, interactive, faceDown, highlighted }: CardProps) {
-  const src = faceDown ? '/cards/back.png' : getCardImageUrl(card);
+  const src = faceDown ? '/cards/back.jpeg' : getCardImageUrl(card);
   const isJester = card.rank === 0;
   const altText = faceDown
     ? 'Card back'
