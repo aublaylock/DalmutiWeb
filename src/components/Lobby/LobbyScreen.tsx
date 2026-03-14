@@ -154,7 +154,7 @@ export function LobbyScreen({ serverURL }: LobbyScreenProps) {
 
   if (view === 'game' && matchInfo) {
     return (
-      <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+      <>
         <DalmutiClient
           matchID={matchInfo.matchID}
           playerID={matchInfo.playerID}
@@ -178,7 +178,7 @@ export function LobbyScreen({ serverURL }: LobbyScreenProps) {
         >
           Leave Match
         </button>
-      </div>
+      </>
     );
   }
 

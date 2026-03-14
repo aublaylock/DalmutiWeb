@@ -25,8 +25,7 @@ function getTablePositions(
   G: DalmutiState,
   myID: string | null,
 ): { left: string[]; top: string[]; right: string[]; bottom: string[] } {
-  // Only show active players in positions (excludes self — rendered in Hand area below)
-  const allIDs = G.activePlayerIDs.filter(id => id !== myID);
+  const allIDs = [...G.activePlayerIDs];
   const n = allIDs.length;
 
   // Sort by social rank when available, otherwise by seatOrder index
